@@ -46,7 +46,6 @@ public OnMenuResponse(playerid, menuid, response, listitem)
 
 enum PlayerMenuEnum
 {
-	PM_MENUID,
 	PM_LISTITEM,
 	PM_LISTITEM_FIRST,
 	PM_LISTITEM_LAST,
@@ -163,29 +162,41 @@ static Menu_DestroyGlobalTDs()
 		Menu_CreateGlobalTDs();
 		for(new i; i < MAX_G_MENUS; i++) gMenu[i][M_EXIST] = false;
 
-		return CallLocalFunction("MENU_OnFilterScriptInit", "");
+        #if defined MENU_OnFilterScriptInit
+        	return MENU_OnFilterScriptInit();
+	    #else
+	    	return 1;
+	    #endif
 	}
 	#if defined _ALS_OnFilterScriptInit
-		#undef OnFilterScriptInit
+	    #undef OnFilterScriptInit
 	#else
-		#define _ALS_OnFilterScriptInit
+	    #define _ALS_OnFilterScriptInit
 	#endif
 	#define OnFilterScriptInit MENU_OnFilterScriptInit
-	forward MENU_OnFilterScriptInit();
+	#if defined MENU_OnFilterScriptInit
+	    forward MENU_OnFilterScriptInit();
+	#endif
 
 	public OnFilterScriptExit()
 	{
 		Menu_DestroyGlobalTDs();
 
-	    return CallLocalFunction("MENU_OnFilterScriptExit", "");
+	    #if defined MENU_OnFilterScriptExit
+        	return MENU_OnFilterScriptExit();
+	    #else
+	    	return 1;
+	    #endif
 	}
 	#if defined _ALS_OnFilterScriptExit
-		#undef OnFilterScriptExit
+	    #undef OnFilterScriptExit
 	#else
-		#define _ALS_OnFilterScriptExit
+	    #define _ALS_OnFilterScriptExit
 	#endif
 	#define OnFilterScriptExit MENU_OnFilterScriptExit
-	forward MENU_OnFilterScriptExit();
+	#if defined MENU_OnFilterScriptExit
+	    forward MENU_OnFilterScriptExit();
+	#endif
 
 #else// if used in a gamemode
 
@@ -194,29 +205,41 @@ static Menu_DestroyGlobalTDs()
 		Menu_CreateGlobalTDs();
 		for(new i; i < MAX_G_MENUS; i++) gMenu[i][M_EXIST] = false;
 
-	    return CallLocalFunction("MENU_OnGameModeInit", "");
+	    #if defined MENU_OnGameModeInit
+        	return MENU_OnGameModeInit();
+	    #else
+	    	return 1;
+	    #endif
 	}
 	#if defined _ALS_OnGameModeInit
-		#undef OnGameModeInit
+	    #undef OnGameModeInit
 	#else
-		#define _ALS_OnGameModeInit
+	    #define _ALS_OnGameModeInit
 	#endif
 	#define OnGameModeInit MENU_OnGameModeInit
-	forward MENU_OnGameModeInit();
+	#if defined MENU_OnGameModeInit
+	    forward MENU_OnGameModeInit();
+	#endif
 
 	public OnGameModeExit()
 	{
 		Menu_DestroyGlobalTDs();
 
-	    return CallLocalFunction("MENU_OnGameModeExit", "");
+	    #if defined MENU_OnGameModeExit
+        	return MENU_OnGameModeExit();
+	    #else
+	    	return 1;
+	    #endif
 	}
 	#if defined _ALS_OnGameModeExit
-		#undef OnGameModeExit
+	    #undef OnGameModeExit
 	#else
-		#define _ALS_OnGameModeExit
+	    #define _ALS_OnGameModeExit
 	#endif
 	#define OnGameModeExit MENU_OnGameModeExit
-	forward MENU_OnGameModeExit();
+	#if defined MENU_OnGameModeExit
+	    forward MENU_OnGameModeExit();
+	#endif
 
 #endif
 
@@ -306,12 +329,12 @@ stock Menu_EditTitle(menuid, newtitle[])
 stock Menu_Show(playerid, menuid, selectioncolor = 0x0000AAFF, bool:showitemid = true)
 {
 	if(! Menu_IsValid(menuid)) return false;
-	
+
 	if(gMenu[menuid][M_LISTITEMS] < 1) return false;
-	
+
 	if(GetPlayerMenuID(playerid) != INVALID_MENU_ID) Menu_Hide(playerid);
 
-    gPlayerMenu[playerid][PM_MENUID] = menuid;
+	SetPVarInt(playerid, "MenuID", menuid);
     gPlayerMenu[playerid][PM_LISTITEM] = 0;
     gPlayerMenu[playerid][PM_LISTITEM_FIRST] = 0;
     gPlayerMenu[playerid][PM_SELECTION_COLOR] = selectioncolor;
@@ -352,7 +375,7 @@ stock Menu_Show(playerid, menuid, selectioncolor = 0x0000AAFF, bool:showitemid =
  	if(showitemid)
 	{
 		TextDrawShowForPlayer(playerid, gMenuGlobalTD[1]);
-	
+
 		new menustr[10];
 		format(menustr, sizeof(menustr), "1/%i", gMenu[menuid][M_LISTITEMS]);
 		gMenuPlayerTD[playerid][1] = MENU_PlayerTextDrawAdd(playerid, 149.000000, 189.000000, menustr, 255, 1, 0.170000, 0.800000, -1, 3, 0, true);
@@ -371,16 +394,16 @@ stock Menu_Hide(playerid)
 
 	PlayerTextDrawHide(playerid, gMenuPlayerTD[playerid][0]);
 	PlayerTextDrawDestroy(playerid, gMenuPlayerTD[playerid][0]);
-	
+
 	if(gPlayerMenu[playerid][PM_SHOW_ITEM_ID])
 	{
 		TextDrawHideForPlayer(playerid, gMenuGlobalTD[1]);
-	
+
 		PlayerTextDrawHide(playerid, gMenuPlayerTD[playerid][1]);
 		PlayerTextDrawDestroy(playerid, gMenuPlayerTD[playerid][1]);
 	}
 
-	gPlayerMenu[playerid][PM_MENUID] = INVALID_MENU_ID;
+	SetPVarInt(playerid, "MenuID", INVALID_MENU_ID);
     gPlayerMenu[playerid][PM_LISTITEM] = 0;
     gPlayerMenu[playerid][PM_LISTITEM_FIRST] = 0;
     gPlayerMenu[playerid][PM_LISTITEM_LAST] = 0;
@@ -392,7 +415,7 @@ stock Menu_Hide(playerid)
 
 stock GetPlayerMenuID(playerid)
 {
-	return gPlayerMenu[playerid][PM_MENUID];
+	return GetPVarInt(playerid, "MenuID");
 }
 
 stock GetPlayerMenuLisitemID(playerid)
@@ -402,22 +425,28 @@ stock GetPlayerMenuLisitemID(playerid)
 
 public OnPlayerConnect(playerid)
 {
-    gPlayerMenu[playerid][PM_MENUID] = INVALID_MENU_ID;
+	SetPVarInt(playerid, "MenuID", INVALID_MENU_ID);
     gPlayerMenu[playerid][PM_LISTITEM] = 0;
     gPlayerMenu[playerid][PM_LISTITEM_FIRST] = 0;
     gPlayerMenu[playerid][PM_LISTITEM_LAST] = 0;
     gPlayerMenu[playerid][PM_SELECTION_COLOR] = -1;
     gPlayerMenu[playerid][PM_TICK] = GetTickCount();
 
-    return CallLocalFunction("MENU_OnPlayerConnect", "i", playerid);
+    #if defined MENU_OnPlayerConnect
+       	return MENU_OnPlayerConnect(playerid);
+	#else
+	   	return 1;
+	#endif
 }
 #if defined _ALS_OnPlayerConnect
-	#undef OnPlayerConnect
+    #undef OnPlayerConnect
 #else
-	#define _ALS_OnPlayerConnect
+    #define _ALS_OnPlayerConnect
 #endif
 #define OnPlayerConnect MENU_OnPlayerConnect
-forward MENU_OnPlayerConnect(playerid);
+#if defined MENU_OnPlayerConnect
+    forward MENU_OnPlayerConnect(playerid);
+#endif
 
 public OnPlayerUpdate(playerid)
 {
@@ -445,7 +474,7 @@ public OnPlayerUpdate(playerid)
 
 				   	PlayerPlaySound(playerid, MENU_SOUND_UP, 0.0, 0.0, 0.0);
 				}
-				else return 1;
+				goto skip;
 			}
 			//if the player have reached the end of page; push the player to next page!
 			else if(index > gPlayerMenu[playerid][PM_LISTITEM_LAST])
@@ -458,7 +487,7 @@ public OnPlayerUpdate(playerid)
 
 				   	PlayerPlaySound(playerid, MENU_SOUND_UP, 0.0, 0.0, 0.0);
 				}
-				else return 1;
+				goto skip;
 			}
 			//if on the same list but requesting for next item; then highlight the next item !
 			else
@@ -481,7 +510,7 @@ public OnPlayerUpdate(playerid)
 						format(menustr, sizeof(menustr), "%i/%i", (gPlayerMenu[playerid][PM_LISTITEM] + 1), gMenu[GetPlayerMenuID(playerid)][M_LISTITEMS]);
 						PlayerTextDrawSetString(playerid, gMenuPlayerTD[playerid][1], menustr);
 					}
-					
+
 					if(MENU_iseven(index)) PlayerTextDrawBoxColor(playerid, gMenuPlayerItemsTD[playerid][index], MENU_SetTransparency(gPlayerMenu[playerid][PM_SELECTION_COLOR], 150));
 					else PlayerTextDrawBoxColor(playerid, gMenuPlayerItemsTD[playerid][index], MENU_SetTransparency(gPlayerMenu[playerid][PM_SELECTION_COLOR], 100));
 					PlayerTextDrawShow(playerid, gMenuPlayerItemsTD[playerid][index]);
@@ -489,7 +518,7 @@ public OnPlayerUpdate(playerid)
 				   	PlayerPlaySound(playerid, MENU_SOUND_UP, 0.0, 0.0, 0.0);
 				}
 				//end
-				return 1;
+				goto skip;
 			}
 
 			//if the first 2 conditons apply (any one)
@@ -519,7 +548,7 @@ public OnPlayerUpdate(playerid)
 						format(menustr, sizeof(menustr), "%i/%i", (gPlayerMenu[playerid][PM_LISTITEM] + 1), gMenu[GetPlayerMenuID(playerid)][M_LISTITEMS]);
 						PlayerTextDrawSetString(playerid, gMenuPlayerTD[playerid][1], menustr);
 					}
-					
+
 					gPlayerMenu[playerid][PM_LISTITEM_LAST] = i;
 				}
 			}
@@ -539,8 +568,7 @@ public OnPlayerUpdate(playerid)
 				{
 				   	PlayerPlaySound(playerid, 1085, 0.0, 0.0, 0.0);
 				}
-				else return 1;
-			   	return 1;
+				goto skip;
 			}
 			//if the player have reached the first item of page; push the player to previous page!
 			else if(index < gPlayerMenu[playerid][PM_LISTITEM_FIRST])
@@ -575,7 +603,7 @@ public OnPlayerUpdate(playerid)
 						format(menustr, sizeof(menustr), "%i/%i", (gPlayerMenu[playerid][PM_LISTITEM] + 1), gMenu[GetPlayerMenuID(playerid)][M_LISTITEMS]);
 						PlayerTextDrawSetString(playerid, gMenuPlayerTD[playerid][1], menustr);
 					}
-					
+
 					if(MENU_iseven(index)) PlayerTextDrawBoxColor(playerid, gMenuPlayerItemsTD[playerid][index], MENU_SetTransparency(gPlayerMenu[playerid][PM_SELECTION_COLOR], 150));
 					else PlayerTextDrawBoxColor(playerid, gMenuPlayerItemsTD[playerid][index], MENU_SetTransparency(gPlayerMenu[playerid][PM_SELECTION_COLOR], 100));
 					PlayerTextDrawShow(playerid, gMenuPlayerItemsTD[playerid][index]);
@@ -583,7 +611,7 @@ public OnPlayerUpdate(playerid)
 				   	PlayerPlaySound(playerid, MENU_SOUND_DOWN, 0.0, 0.0, 0.0);
 				}
 				//end
-				return 1;
+				goto skip;
 			}
 
 			//if the first conditon apply (any one)
@@ -630,14 +658,23 @@ public OnPlayerUpdate(playerid)
 			}
 		}
 	}
-	return CallLocalFunction("MENU_OnPlayerUpdate", "i", playerid);
+	
+	skip:
+	
+	#if defined MENU_OnPlayerUpdate
+       	return MENU_OnPlayerUpdate(playerid);
+	#else
+	   	return 1;
+	#endif
 }
 #if defined _ALS_OnPlayerUpdate
-	#undef OnPlayerUpdate
+    #undef OnPlayerUpdate
 #else
-	#define _ALS_OnPlayerUpdate
+    #define _ALS_OnPlayerUpdate
 #endif
 #define OnPlayerUpdate MENU_OnPlayerUpdate
-forward MENU_OnPlayerUpdate(playerid);
+#if defined MENU_OnPlayerUpdate
+    forward MENU_OnPlayerUpdate(playerid);
+#endif
 
 forward OnMenuResponse(playerid, menuid, response, listitem);
